@@ -56,6 +56,8 @@ public class Project2{
 			}
 		}
 
+		System.out.printf("Run with %d patients, %d nurses, %d doctors %n%n", numPatients, numDoctors, numDoctors);
+
 		// Initialize Semaphores
 		enteredPatient = new Semaphore(0, true);
 		readyReceptionest = new Semaphore(0, true);
@@ -124,6 +126,7 @@ public class Project2{
 					//	Receptionest waits for the patient to give their patient ID, and gives the patient a random doctor's office
 					givePatientID.acquire();
 					System.out.printf("Receptionest registers patient %d.%n", registerPatientID);
+					Thread.sleep(1000);
 					officeNumber = new java.util.Random().nextInt(numDoctors);
 					declaredOfficeNumber.release();
 
@@ -153,6 +156,7 @@ public class Project2{
 					// Doctor is available to listen to symptoms
 					symptomListen[doctorID].acquire();
 					System.out.printf("Doctor %d listens to symptoms from patient %d. %n", doctorID, inOffice[doctorID]);
+					Thread.sleep(1000);
 
 					//	Doctor gives advices from symptoms
 					doctorAdvice[doctorID].release();
@@ -174,6 +178,7 @@ public class Project2{
 				//	Patient enters waiting room and waits for an open receptionest
 				enteredPatient.release();
 				System.out.printf("Patient %d enters the waiting room, waits for receptionest. %n", patientID);
+				Thread.sleep(1000);
 				readyReceptionest.acquire();
 
 				//	Patient gives their ID to the receptionest
@@ -184,6 +189,7 @@ public class Project2{
 				declaredOfficeNumber.acquire();
 				assignedOffice = officeNumber;
 				System.out.printf("Patient %d leaves receptionest and sits in the waiting room. %n", patientID);
+				Thread.sleep(1000);
 				receptionLeave.release();
 
 				// Patient waits for nurse to direct to instructed office
@@ -194,6 +200,7 @@ public class Project2{
 
 				//Patient sits in instructed office waiting for the doctor to come and listen to symptoms
 				System.out.printf("Patient %d enter doctor %d's office. %n", patientID, assignedOffice);
+				Thread.sleep(1000);
 				inOffice[assignedOffice] = patientID;
 				officePatient[assignedOffice].release();
 				availableDoctor[assignedOffice].acquire();
@@ -202,6 +209,7 @@ public class Project2{
 				symptomListen[assignedOffice].release();
 				doctorAdvice[assignedOffice].acquire();
 				System.out.printf("Patient %d recieves advice from doctor %d's office. %n", patientID, assignedOffice);
+				Thread.sleep(1000);
 
 				//	Patient leaves the office
 				System.out.printf("Patient %d leaves. %n", patientID);
@@ -230,6 +238,7 @@ public class Project2{
 					//	directs patient to the doctor's office and notify the doctor
 					System.out.printf("Nurse %d takes patient %d to doctor's office. %n", nurseID, waitingToOffice[nurseID]);
 					officeDirection[nurseID].release();
+					Thread.sleep(1000);
 					notifiedDoctor[nurseID].release();
 				}
 			} catch(InterruptedException e){System.out.println("InterruptedException in Nurse " + nurseID);}
