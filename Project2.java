@@ -1,8 +1,11 @@
-import java.util.concurrent.Semaphonre;
+import java.util.concurrent.Semaphore;
 
 public class Project2{
 	private static Semaphore enteredPatient;
 	private static Semaphore readyReceptionest;
+	private static Semaphore givePatientID;
+	private static Semaphore declaredOfficeNumber;
+	private static Semaphore receptionLeave;
 	private static Semaphore waitingPatient[];
 	private static Semaphore notifiedNurse[];
 	private static Semaphore availableNurse[];
@@ -14,10 +17,19 @@ public class Project2{
 	private static Semaphore doctorAdvice[];
 	private static Semaphore patientLeaves[];
 
+	// Shared resources
+	private static int registerPatientID;
+	private static int officeNumber;
+	private static int numDoctors;
+	private static int numPatients;
+	private static int waitingToOffice[] = new int[3];
+	private static int inOffice[] = new int[3];
+
+
 	public static void main(String[] args){
 		// int numReceptionest = 1;	// number of receptionest (1)
-		int numDoctors = 3;			// maximum number of doctors is 3
-		int numPatients = 30;		// maximum number of patients is 30
+		numDoctors = 3;			// maximum number of doctors is 3
+		numPatients = 3;		// maximum number of patients is 30
 		
 		for(int argIndex = 0; argIndex < args.length; argIndex++){
 			char[] argFlag = args[argIndex].toCharArray();
@@ -44,78 +56,183 @@ public class Project2{
 			}
 		}
 
+		// Initialize Semaphores
+		enteredPatient = new Semaphore(0, true);
+		readyReceptionest = new Semaphore(0, true);
+		givePatientID = new Semaphore(0,true);
+		declaredOfficeNumber = new Semaphore(0,true);
+		receptionLeave = new Semaphore(0,true);
+		waitingPatient = new Semaphore[numDoctors];
+		notifiedNurse = new Semaphore[numDoctors];
+		availableNurse = new Semaphore[numDoctors];
+		officeDirection = new Semaphore[numDoctors];
+		officePatient = new Semaphore[numDoctors];
+		notifiedDoctor = new Semaphore[numDoctors];
+		availableDoctor = new Semaphore[numDoctors];
+		symptomListen = new Semaphore[numDoctors];
+		doctorAdvice = new Semaphore[numDoctors];
+		patientLeaves = new Semaphore[numDoctors];
+		for(int i = 0; i < numDoctors; i++){
+			waitingPatient[i] = new Semaphore(0, true);
+			notifiedNurse[i] = new Semaphore(0, true);
+			availableNurse[i] = new Semaphore(0, true);
+			officeDirection[i] = new Semaphore(0, true);
+			officePatient[i] = new Semaphore(0, true);
+			notifiedDoctor[i] = new Semaphore(0, true);
+			availableDoctor[i] = new Semaphore(0, true);
+			symptomListen[i] = new Semaphore(0, true);
+			doctorAdvice[i] = new Semaphore(0, true);
+			patientLeaves[i] = new Semaphore(1, true);
+		}
+
 
 		// Initialize Threads
 		Thread receptionest = new Thread(new Receptionest());
+		receptionest.start();
 
 		Thread doctor[] = new Thread[numDoctors];
 		Thread nurse[] = new Thread[numDoctors];
 		for(int i = 0; i < numDoctors; i++){
 			doctor[i] = new Thread(new Doctor(i));
 			nurse[i] = new Thread(new Nurse(i));
+
+			doctor[i].start();
+			nurse[i].start();
 		}
 
 		Thread patient[] = new Thread[numPatients];
 		for(int i = 0; i < numPatients; i++){
 			patient[i] = new Thread(new Patient(i));
+			patient[i].start();
 		}
 
-		// Initialize Semaphores
-		enteredPatient = new Semaphore(0, true);
-		readyReceptionest = new Semaphore(0, true);
-		for(int i = 0; i < numDoctors; i++){
-			waitingPatient = new Semaphore(0, true);
-			notifiedNurse = new Semaphore(0, true);
-			availableNurse = new Semaphore(0, true);
-			officeDirection = new Semaphore(0, true);
-			officePatient = new Semaphore(0, true);
-			notifiedDoctor = new Semaphore(0, true);
-			availableDoctor = new Semaphore(0, true);
-			symptomListen = new Semaphore(0, true);
-			doctorAdvice = new Semaphore(0, true);
-			patientLeaves = new Semaphore(0, true);
-		}
+		// Thread start
+
 	}
 
-	public static class Receptionest implements Runnable{
+	static class Receptionest implements Runnable{
 		// private int receptionestID;
 		// public Receptionest(int id){ this.receptionestID = id };
 		public void run(){
 			try{
-				readyReceptionest.release();
-			} catch(InteruptedException e){System.out.println("InterruptedException in Receptionest")}
+				while(true){
+					//	Receptionest waits for a entered patient
+					readyReceptionest.release();
+						// System.out.println("Receptionest is ready to service a patient.")
+					enteredPatient.acquire();
+
+					//	Receptionest waits for the patient to give their patient ID, and gives the patient a random doctor's office
+					givePatientID.acquire();
+					System.out.printf("Receptionest registers patient %d.%n", registerPatientID);
+					officeNumber = new java.util.Random().nextInt(numDoctors);
+					declaredOfficeNumber.release();
+
+					// Notify the nurse of the patient
+					notifiedNurse[officeNumber].release();
+
+
+					//	Receptionest waits for patient to leave reception window
+					receptionLeave.acquire();
+				}
+			} catch(InterruptedException e){System.out.println("InterruptedException in Receptionest");}
 		}
 	}
 
-	public class Doctor implements Runnable{
+	static class Doctor implements Runnable{
 		private int doctorID;
-		public Doctor(int id){ this.doctorID = id };
+		public Doctor(int id){ this.doctorID = id; }
 		public void run(){
 			try{
+				while(true){
+					availableDoctor[doctorID].release();
 
-			} catch(InteruptedException e){System.out.println("InterruptedException in Doctor " + doctorID);}
+					// Waits to be notified and for the patient to make his way to the room
+					notifiedDoctor[doctorID].acquire();
+					officePatient[doctorID].acquire();
+
+					// Doctor is available to listen to symptoms
+					symptomListen[doctorID].acquire();
+					System.out.printf("Doctor %d listens to symptoms from patient %d. %n", doctorID, inOffice[doctorID]);
+
+					//	Doctor gives advices from symptoms
+					doctorAdvice[doctorID].release();
+
+				}
+
+			} catch(InterruptedException e){System.out.println("InterruptedException in Doctor " + doctorID);}
 
 		}
 	}
 
-	public class Patient implements Runnable{
+	static class Patient implements Runnable{
 		private int patientID;
-		public Patient(int id){ this.patientID = id };
+		private int assignedOffice;
+		public Patient(int id){ this.patientID = id; }
 		public void run(){
 			try{
 
-			} catch(InteruptedException e){System.out.println("InterruptedException in Patient " + patientID);}
+				//	Patient enters waiting room and waits for an open receptionest
+				enteredPatient.release();
+				System.out.printf("Patient %d enters the waiting room, waits for receptionest. %n", patientID);
+				readyReceptionest.acquire();
+
+				//	Patient gives their ID to the receptionest
+				registerPatientID = patientID;
+				givePatientID.release();
+
+				//	Patient waits and take the assigned office, and sits and waits for nurse
+				declaredOfficeNumber.acquire();
+				assignedOffice = officeNumber;
+				System.out.printf("Patient %d leaves receptionest and sits in the waiting room. %n", patientID);
+				receptionLeave.release();
+
+				// Patient waits for nurse to direct to instructed office
+				waitingPatient[assignedOffice].release();
+				availableNurse[assignedOffice].acquire();
+				waitingToOffice[assignedOffice] = patientID;
+				officeDirection[assignedOffice].acquire();
+
+				//Patient sits in instructed office waiting for the doctor to come and listen to symptoms
+				System.out.printf("Patient %d enter doctor %d's office. %n", patientID, assignedOffice);
+				inOffice[assignedOffice] = patientID;
+				officePatient[assignedOffice].release();
+				availableDoctor[assignedOffice].acquire();
+
+				//	Patient gives symptoms and waits for doctor to give advice
+				symptomListen[assignedOffice].release();
+				doctorAdvice[assignedOffice].acquire();
+				System.out.printf("Patient %d recieves advice from doctor %d's office. %n", patientID, assignedOffice);
+
+				//	Patient leaves the office
+				System.out.printf("Patient %d leaves. %n", patientID);
+				patientLeaves[assignedOffice].release();
+
+			} catch(InterruptedException e){System.out.println("InterruptedException in Patient " + patientID);}
 
 		}
 	}
 
-	public class Nurse implements Runnable{
+	static class Nurse implements Runnable{
 		private int nurseID;
-		public Nurse(int id){ this.patientID = id };
+		public Nurse(int id){ this.nurseID = id; }
 		public void run(){
 			try{
+				while(true){
+					availableNurse[nurseID].release();
 
-			} catch(InteruptedException e){System.out.println("InterruptedException in Nurse " + nurseID);}
+					//	wait for patient to finish registering, and for receptionest to notify the nurse
+					waitingPatient[nurseID].acquire();
+					notifiedNurse[nurseID].acquire();
+
+					//	Nurse waits for the office to be empty
+					patientLeaves[nurseID].acquire();
+
+					//	directs patient to the doctor's office and notify the doctor
+					System.out.printf("Nurse %d takes patient %d to doctor's office. %n", nurseID, waitingToOffice[nurseID]);
+					officeDirection[nurseID].release();
+					notifiedDoctor[nurseID].release();
+				}
+			} catch(InterruptedException e){System.out.println("InterruptedException in Nurse " + nurseID);}
 
 		}
 	}
