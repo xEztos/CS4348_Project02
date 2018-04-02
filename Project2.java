@@ -1,5 +1,14 @@
 import java.util.concurrent.Semaphore;
 
+/**
+ * Project 2 for CS 4348 Operating Systems. This is a project that simulates the journey of a patient through a clinic.
+ *
+ *	The clinic to be simulated has doctors, each of which has their own nurse. Each doctor has an office of his or her own in which to visit patients. Patients 
+ *	will enter the clinic to see a doctor, which should be randomly assigned. Initially, a patient enters the waiting room and waits to register with the receptionist. 
+ *	Once registered, the patient sits in the waiting room until the nurse calls. The receptionist lets the nurse know a patient is waiting. The nurse directs the 
+ *	patient to the doctor’s office and tells the doctor that a patient is waiting. The doctor visits the patient and listens to the patient’s symptoms. The doctor 
+ *	advises the patient on the action to take. The patient then leaves.
+ */
 public class Project2{
 	private static Semaphore enteredPatient;
 	private static Semaphore readyReceptionest;
@@ -29,6 +38,10 @@ public class Project2{
 	private static int SLEEP_DELAY = 1000;
 
 
+	/**
+	 *	Main running method of the Project.
+	 *	@param args the arguments that modify the number of doctors, the number of patients, and the delay
+	 */
 	public static void main(String[] args){
 		// int numReceptionest = 1;	// number of receptionest (1)
 		numDoctors = 3;			// maximum number of doctors is 3
@@ -136,6 +149,9 @@ public class Project2{
 
 	}
 
+	/**
+	 *	Simulates a receptionest at a hospital or a clinic that registers a patient and assigns them to a random doctor
+	 */
 	static class Receptionest implements Runnable{
 		boolean running;
 		// private int receptionestID;
@@ -172,8 +188,16 @@ public class Project2{
 		// }
 	}
 
+	/**
+	 *	Simulates a doctor that first waits for the nurse to inform him of a waiting patient, listens to that patient's symptoms, and advises on further actions.
+	 */
 	static class Doctor implements Runnable{
 		private int doctorID;
+
+		/**
+		 *	The constructor for the doctor that works in the clinic. The doctor's id is the same as the nurse's id and the office id
+		 *	@param id the id number of the doctor that must be the same as the nurse he is assigned
+		 */
 		public Doctor(int id){ this.doctorID = id; }
 		public void run(){
 			try{
@@ -199,10 +223,25 @@ public class Project2{
 		}
 	}
 
+	/**
+	 *	Simulates the patients that goes through a doctor's office:
+	 *		- Registers with the receptionest
+	 *		- Waits in the waiting room for the nurse
+	 *		- Waits in the doctor's office for the doctor
+	 *		- "tells" the doctor of the patient's symptoms
+	 *		- "recieves" the advice from the doctor
+	 *		- leaves the doctor's office
+	 */
 	static class Patient implements Runnable{
 		private int patientID;
 		private int assignedOffice;
+
+		/**
+		 *	Constructor for the patient that treks through the clinic
+		 *	@param id the unique ID number of this patient
+		 */
 		public Patient(int id){ this.patientID = id; }
+
 		public void run(){
 			try{
 
@@ -253,11 +292,17 @@ public class Project2{
 
 
 	/**
-	 *	Simulates a nurse in a doctor's office, that takes a patient from the 
+	 *	Simulates a nurse in a doctor's office, that takes a patient from the waiting room to the assigned doctor's office and informs the doctor
 	 */
 	static class Nurse implements Runnable{
 		private int nurseID;
+
+		/**
+		 *	Constructor for the simulated nurse.
+		 *	@param id the office this nurse is associated with (must be the same as the assigned doctor id)
+		 */
 		public Nurse(int id){ this.nurseID = id; }
+
 		public void run(){
 			try{
 				while(true){
