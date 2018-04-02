@@ -26,6 +26,9 @@ public class Project2{
 	private static int inOffice[] = new int[3];
 
 
+	private static int SLEEP_DELAY = 1000;
+
+
 	public static void main(String[] args){
 		// int numReceptionest = 1;	// number of receptionest (1)
 		numDoctors = 3;			// maximum number of doctors is 3
@@ -39,11 +42,16 @@ public class Project2{
 					case '-':
 						switch(argFlag[1]){
 							case 'd':	// number of doctors
+							case 'D':
 								numDoctors = Integer.parseInt(args[++argIndex]);
 								break;
 							case 'p':	// number of patients
+							case 'P':
 								numPatients = Integer.parseInt(args[++argIndex]);
 								break;
+							case 's':
+							case 'S':
+								SLEEP_DELAY = Integer.parseInt(args[++argIndex]);
 							default:
 								break;
 						}
@@ -88,7 +96,7 @@ public class Project2{
 		}
 
 
-		// Initialize Threads
+		// Initialize and Start Threads
 		Thread receptionest = new Thread(new Receptionest());
 		receptionest.start();
 
@@ -108,16 +116,34 @@ public class Project2{
 			patient[i].start();
 		}
 
-		// Thread start
+
+		// Waits for all the patients to finished ex2ecuting
+		for(int i = 0; i < numPatients; i++){
+			try{
+				patient[i].join();
+			} catch (InterruptedException e) {}
+		}
+
+
+		// receptionest.interrupt();
+		// for(int i = 0; i < numDoctors; i++){
+		// 	doctor[i].interrupt();
+		// 	nurse[i].interrupt();
+		// }
+
+		System.exit(0);
+
 
 	}
 
 	static class Receptionest implements Runnable{
+		boolean running;
 		// private int receptionestID;
 		// public Receptionest(int id){ this.receptionestID = id };
 		public void run(){
+			running = true;
 			try{
-				while(true){
+				while(running){
 					//	Receptionest waits for a entered patient
 					readyReceptionest.release();
 						// System.out.println("Receptionest is ready to service a patient.")
@@ -126,7 +152,7 @@ public class Project2{
 					//	Receptionest waits for the patient to give their patient ID, and gives the patient a random doctor's office
 					givePatientID.acquire();
 					System.out.printf("Receptionest registers patient %d.%n", registerPatientID);
-					Thread.sleep(1000);
+					Thread.sleep(SLEEP_DELAY);
 					officeNumber = new java.util.Random().nextInt(numDoctors);
 					declaredOfficeNumber.release();
 
@@ -139,6 +165,11 @@ public class Project2{
 				}
 			} catch(InterruptedException e){System.out.println("InterruptedException in Receptionest");}
 		}
+
+		// public void exit(int exit_code){
+		// 	running=false;
+		// 	System.out.printf("Receptionest is exiting");
+		// }
 	}
 
 	static class Doctor implements Runnable{
@@ -156,7 +187,7 @@ public class Project2{
 					// Doctor is available to listen to symptoms
 					symptomListen[doctorID].acquire();
 					System.out.printf("Doctor %d listens to symptoms from patient %d. %n", doctorID, inOffice[doctorID]);
-					Thread.sleep(1000);
+					Thread.sleep(SLEEP_DELAY);
 
 					//	Doctor gives advices from symptoms
 					doctorAdvice[doctorID].release();
@@ -178,7 +209,7 @@ public class Project2{
 				//	Patient enters waiting room and waits for an open receptionest
 				enteredPatient.release();
 				System.out.printf("Patient %d enters the waiting room, waits for receptionest. %n", patientID);
-				Thread.sleep(1000);
+				Thread.sleep(SLEEP_DELAY);
 				readyReceptionest.acquire();
 
 				//	Patient gives their ID to the receptionest
@@ -189,7 +220,7 @@ public class Project2{
 				declaredOfficeNumber.acquire();
 				assignedOffice = officeNumber;
 				System.out.printf("Patient %d leaves receptionest and sits in the waiting room. %n", patientID);
-				Thread.sleep(1000);
+				Thread.sleep(SLEEP_DELAY);
 				receptionLeave.release();
 
 				// Patient waits for nurse to direct to instructed office
@@ -200,7 +231,7 @@ public class Project2{
 
 				//Patient sits in instructed office waiting for the doctor to come and listen to symptoms
 				System.out.printf("Patient %d enter doctor %d's office. %n", patientID, assignedOffice);
-				Thread.sleep(1000);
+				Thread.sleep(SLEEP_DELAY);
 				inOffice[assignedOffice] = patientID;
 				officePatient[assignedOffice].release();
 				availableDoctor[assignedOffice].acquire();
@@ -209,7 +240,7 @@ public class Project2{
 				symptomListen[assignedOffice].release();
 				doctorAdvice[assignedOffice].acquire();
 				System.out.printf("Patient %d recieves advice from doctor %d's office. %n", patientID, assignedOffice);
-				Thread.sleep(1000);
+				Thread.sleep(SLEEP_DELAY);
 
 				//	Patient leaves the office
 				System.out.printf("Patient %d leaves. %n", patientID);
@@ -241,8 +272,8 @@ public class Project2{
 
 					//	directs patient to the doctor's office and notify the doctor
 					System.out.printf("Nurse %d takes patient %d to doctor's office. %n", nurseID, waitingToOffice[nurseID]);
+					Thread.sleep(SLEEP_DELAY);
 					officeDirection[nurseID].release();
-					Thread.sleep(1000);
 					notifiedDoctor[nurseID].release();
 				}
 			} catch(InterruptedException e){System.out.println("InterruptedException in Nurse " + nurseID);}
