@@ -220,6 +220,10 @@ public class Project2{
 		}
 	}
 
+
+	/**
+	 *	Simulates a nurse in a doctor's office, that takes a patient from the 
+	 */
 	static class Nurse implements Runnable{
 		private int nurseID;
 		public Nurse(int id){ this.nurseID = id; }
